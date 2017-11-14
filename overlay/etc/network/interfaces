@@ -1,0 +1,13 @@
+auto lo
+iface lo inet loopback
+
+auto wlan0
+iface wlan0 inet dhcp
+	#wpa-ssid OpenWrt
+        #wpa-psk 807f4c8f35d50e88409ce3f7672abd1d58673778b827179b6989b17af6042a48
+	pre-up wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant.conf
+
+auto eth0
+iface eth0 inet static
+	address 192.168.10.25
+	netmask 255.255.255.0
