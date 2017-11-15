@@ -11,9 +11,9 @@ static struct timer_list t;
 static int red(int pinNo, int value);
 static int green(int pinNo, int value);
 static int blue(int pinNo, int value);
-static void freeRed();
-static void freeGreen();
-static void freeBlue();
+void freeRed();
+void freeGreen();
+void freeBlue();
 void timer_callback(unsigned long data);
 static int __init fonctionInit(void);
 static void __exit fonctionExit(void);
@@ -126,19 +126,21 @@ static int __init fonctionInit(void)
     return 0;
 }
 
-static void freeRed()
+void freeRed()
 {
     gpio_set_value(r->gpio,1);
     gpio_free(r->gpio);
     kfree(r);
 }
-static void freeGreen()
+
+void freeGreen()
 {
     gpio_set_value(g->gpio,1);
     gpio_free(g->gpio);
     kfree(g);
 }
-static void freeBlue()
+
+void freeBlue()
 {
     gpio_set_value(b->gpio,1);
     gpio_free(b->gpio);
