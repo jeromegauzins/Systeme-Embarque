@@ -146,10 +146,11 @@ void timer_callback(unsigned long data)
 
 static int __init fonctionInit(void)
 {
+    int tmp = 0;
     state = 0;
     //Reservation et initialisation des GPIOs ici
     
-    int tmp = 0;
+    
     
     tmp = red(4,1);
     if(tmp<0)
@@ -173,12 +174,7 @@ static int __init fonctionInit(void)
     }
 
     //Initialisation du timer :
-    tmp = setup_timer(&t,timer_callback,0);//mise en place du callback
-     if(tmp<0)
-    {
-        printk(KERN_INFO"Erreur setup_timer");
-        fonctionExit();
-    }
+    setup_timer(&t,timer_callback,0);//mise en place du callback
     
     tmp = mod_timer(&t, jiffies + msecs_to_jiffies(500));//le timer sera appele dans 500ms
     if(tmp<0)
