@@ -108,7 +108,7 @@ void timer_callback(unsigned long data)
     blue(b->gpio,state%2);
     state = tmpState + 1;
     //Puis on rajoute 500ms au timer.
-    printk(KERN_INFO"timer");
+    printk(KERN_INFO"timer, state = %d\n",state);
     mod_timer(&t, jiffies + msecs_to_jiffies(500));
 }
 
