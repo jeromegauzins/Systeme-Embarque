@@ -1,0 +1,4 @@
+config BR2_PACKAGE_GPIOOO
+ bool gpiooo
+  help
+   driver gpiooo
