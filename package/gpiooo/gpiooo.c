@@ -148,15 +148,14 @@ static int __init fonctionInit(void)
 {
     int tmp = 0;
     state = 0;
+    
     //Reservation et initialisation des GPIOs ici
-    
-    
     
     tmp = red(4,1);
     if(tmp<0)
     {
         printk(KERN_INFO"Erreur ini red");
-        return tmp;
+        goto error_red;
     }
     
     tmp = green(2,1);
@@ -184,13 +183,13 @@ static int __init fonctionInit(void)
     }
     
     return 0;
-
-  
-     error_blue:
+    
+    error_blue:
         freeGreen();
-     error_green:
+    error_green:
         freeRed();
-    return tmp;
+    error_red:
+        return tmp;
 }
 
 void freeRed(void)
