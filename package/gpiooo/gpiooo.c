@@ -126,19 +126,19 @@ static int __init fonctionInit(void)
     return 0;
 }
 
-void freeRed()
+static void freeRed()
 {
     gpio_set_value(r->gpio,1);
     gpio_free(r->gpio);
     kfree(r);
 }
-void freeGreen()
+static void freeGreen()
 {
     gpio_set_value(g->gpio,1);
     gpio_free(g->gpio);
     kfree(g);
 }
-void freeBlue()
+static void freeBlue()
 {
     gpio_set_value(b->gpio,1);
     gpio_free(b->gpio);
