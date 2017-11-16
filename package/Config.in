@@ -1982,4 +1982,7 @@ menu "kFantomes"
 	source "package/fantomes/Config.in"
 endmenu
 
+menu "servo"
+    source "package/servo/Config.in"
+endmenu
 endmenu
