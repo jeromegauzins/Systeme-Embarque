@@ -4,9 +4,9 @@
 #include <linux/slab.h>
 #include <linux/timer.h>
 
-struct gpio *r,*g,*b;
-int state;
-static struct timer_list t;
+struct gpio *r,*g,*b; //GPIOs correspondant aux composantes rouge,bleue et verte de la DEL RGB.
+int state; 
+static struct timer_list timer;
 
 static int red(int pinNo, int value);
 static int green(int pinNo, int value);
@@ -25,8 +25,8 @@ irqreturn_t irq_bouton (int irq, void *data)
 
 static int red(int pinNo, int value)
 {
-    
     //Initialise la DEL rouge branchee sur la pin numerotee pinNo a value
+
     int tmp = 0;
     r = (struct gpio*) kmalloc(sizeof(struct gpio),GFP_KERNEL);
     if(r == NULL)
@@ -36,7 +36,7 @@ static int red(int pinNo, int value)
     }
 
     r->gpio = pinNo;
-    tmp = gpio_request(r->gpio, "VERT");
+    tmp = gpio_request(r->gpio, "ROUGE");
     if(tmp < 0)
     {
         printk(KERN_INFO"Erreur gpio_request red");
@@ -129,7 +129,8 @@ static int blue(int pinNo, int value)
 }
 
 void timer_callback(unsigned long data)
-{//On boucle sur toutes les combinaisons de couleurs (avec intensite maximale)
+{//A chaque appel de la fonction, on passe a la combinaison de couleurs suivante
+// Les DEL sont alimentees en out ou rien, et il y a sept couleurs differentes (le huitieme etat correspond a une DEL eteinte)
     int tmpState = state;
     if(state == 8)
     {
@@ -146,9 +147,9 @@ void timer_callback(unsigned long data)
     gpio_set_value(b->gpio,state%2);
     state = tmpState + 1;
 
-    //Puis on rajoute 500ms au timer.
-    //printk(KERN_INFO"timer, state = %d\n",state);
-    mod_timer(&t, jiffies + msecs_to_jiffies(500));
+    //La couleur change toutes les 500ms.
+
+    mod_timer(&timer, jiffies + msecs_to_jiffies(500));
 }
 
 static int __init fonctionInit(void)
@@ -181,9 +182,9 @@ static int __init fonctionInit(void)
     }
 
     //Initialisation du timer :
-    setup_timer(&t,timer_callback,0);//mise en place du callback
+    setup_timer(&timer,timer_callback,0);//mise en place du callback
     
-    tmp = mod_timer(&t, jiffies + msecs_to_jiffies(500));//le timer sera appele dans 500ms
+    tmp = mod_timer(&timer, jiffies + msecs_to_jiffies(500));//le premier appel du timer sera dans 500ms
     if(tmp<0)
     {
          printk(KERN_INFO"Erreur mod_timer");
@@ -223,7 +224,7 @@ void freeBlue(void)
 static void __exit fonctionExit(void)
 {
     //Liberation du timer :
-    del_timer(&t);
+    del_timer(&timer);
 
     //Liberation des gpios / memoire ici
     //On prend la peine d'eteindre les DELs avant
@@ -237,4 +238,4 @@ module_exit(fonctionExit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Clement Dugue\nJerome Gauzins\nArthur Canal");
-MODULE_DESCRIPTION("Utilisation GPIO");
+MODULE_DESCRIPTION("Utilisation GPIO pour controler une DEL RGB");

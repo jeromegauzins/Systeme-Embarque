@@ -6,16 +6,21 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 
-struct gpio *servo;
-int state;
-static struct pwm_device *p;
-int pwmPeriod = 20000000;//en ns
-int dutyCycle = 2000000;
+/*
+    Ce module sert a commander un servomoteur branche sur la pin22 de la carte et alimenté par une pile 5V indépendante.
+    L'angle est determine par la valeur contenue dans le fichier virtuel /dev/servo
+*/
 
-int major;
+struct gpio *servo; //GPIO commandant la position du servomoteur
+static struct pwm_device *pwmDevice;
+//Valeurs initiales pour la pwm, en nanosecondes.
+int pwmPeriod = 20000000;//Periode de chaque cycle complet de pwm
+int dutyCycle = 2000000;//Durée du duty cycle
 
-struct device *d;
-static struct class *c;
+int major;//numero de major du peripherique
+
+struct device *dev;
+static struct class *cls;
 dev_t devt;
 
 static int d_open(struct inode *i, struct file *fp);
@@ -53,16 +58,19 @@ static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l
 	int i;
 	for (i = 0; i < size; i ++)
 		buf[i] = i;
-	printk(KERN_INFO"Read!!!!\n");
-	//copy_to_user(data, buf, size);
+	printk(KERN_INFO"Fichier lu\n");
+	copy_to_user(data, buf, size);
 	kfree(buf);
 	return size;
 }
 
 static ssize_t d_write(struct file *fp, const char __user *data, size_t size, loff_t *l)
-{
+{//Recuperation de l'angle ecrit dans le fichier par l'utilisateur
+
     int val = 0;
     int errcode;
+
+    //Reception du message
     unsigned long bytesCopied;
     char *msg = kmalloc(size + 1, GFP_KERNEL);
 	bytesCopied = copy_from_user(msg, data, size);
@@ -73,7 +81,8 @@ static ssize_t d_write(struct file *fp, const char __user *data, size_t size, lo
         return bytesCopied;
     }	
     msg[size] = 0;
-	printk(KERN_INFO "J'ai reçu ça: %s\n", msg);
+
+    //Passage d'un message a un angle
     errcode = kstrtoint(msg,10,&val);    
     if(errcode<0)
     {   
@@ -81,27 +90,27 @@ static ssize_t d_write(struct file *fp, const char __user *data, size_t size, lo
         kfree(msg);
         return errcode;
     }
+   
     val = val*1770000/180 + 1385000;//equivalence angle vers dutyCycle
-    printk(KERN_INFO "Apres strtol: %d\n", val);
-    if(val > 2270000 || val < 500000)//dutyCycle trop court ou trop long
-    {
-        printk(KERN_INFO "Valeur trop basse, pas de changement\n");
+
+    if(val > 2270000 || val < 500000)
+    {//dutyCycle trop court ou trop long : le servo ne peut pas depasser -90° ni 90°
+        printk(KERN_INFO "Valeur hors des bornes prevues, pas de changement\n");
     }
     else
     {
         dutyCycle = val;
-        pwm_disable(p);
-        pwm_config(p,dutyCycle,pwmPeriod);
-        pwm_enable(p);
+        pwm_disable(pwmDevice);
+        pwm_config(pwmDevice,dutyCycle,pwmPeriod);
+        pwm_enable(pwmDevice);
     }
     kfree(msg);
 	return size;
 }
 
 static int initServo(int pinNo, int value)
-{
-    
-    //Initialise la DEL rouge branchee sur la pin numerotee pinNo a value
+{    
+    //Initialise le gpio commandant le servo
     int tmp = 0;
     servo = (struct gpio*) kmalloc(sizeof(struct gpio),GFP_KERNEL);
     if(servo == NULL)
@@ -140,6 +149,7 @@ static int __init fonctionInit(void)
     int tmp;
     int status;
 
+    //On utilise la pin 22, qui correspond au canal PWM2
     tmp = initServo(22,1);
     if(tmp<0)
     {
@@ -147,7 +157,7 @@ static int __init fonctionInit(void)
         return tmp;
     }
 
-    major = register_chrdev(0,"SERVO",&fops);//Fichier dans /dev/devices ?
+    major = register_chrdev(0,"SERVO",&fops);
     if(major < 0)
     {
         printk(KERN_INFO"Erreur register_chrdev");
@@ -155,18 +165,18 @@ static int __init fonctionInit(void)
         goto erreurRegister;
     }
 
-    c = class_create(THIS_MODULE, "servo Module");
-    if(IS_ERR(c))
+    cls = class_create(THIS_MODULE, "servo Module");
+    if(IS_ERR(cls))
     {
         printk(KERN_INFO"Erreur register_chrdev");
-        status = PTR_ERR(c);
+        status = PTR_ERR(cls);
         goto erreurClass;
     }
     
     devt = MKDEV(major,0);
-    d = device_create(c,NULL,devt,NULL,"servo");
+    dev = device_create(cls,NULL,devt,NULL,"servo");
     
-    status = IS_ERR(d) ? PTR_ERR(d) : 0;
+    status = IS_ERR(dev) ? PTR_ERR(dev) : 0;
 
     if(status != 0)
     {
@@ -175,14 +185,15 @@ static int __init fonctionInit(void)
         goto erreurDevice;
     }
 
-    p = pwm_request(2,"SERVO_PWM");
-    pwm_config(p,dutyCycle,pwmPeriod);
-    pwm_enable(p);
+    //Initialisation de la pwm (notre branchement utilise le PWM2)
+    pwmDevice = pwm_request(2,"SERVO_PWM");
+    pwm_config(pwmDevice,dutyCycle,pwmPeriod);
+    pwm_enable(pwmDevice);
     
     return 0;
 
 erreurDevice:
-    class_destroy(c);
+    class_destroy(cls);
 erreurClass:
     unregister_chrdev(major,"SERVO");
 erreurRegister:
@@ -200,12 +211,12 @@ void freeServo(void)
 
 static void __exit fonctionExit(void)
 {
-    device_destroy(c,devt);
-    class_destroy(c);
+    device_destroy(cls,devt);
+    class_destroy(cls);
     unregister_chrdev(major,"SERVO");
     freeServo();
-    pwm_disable(p);
-    pwm_free(p);
+    pwm_disable(pwmDevice);
+    pwm_free(pwmDevice);
 }
 
 module_init(fonctionInit);

@@ -7,10 +7,11 @@
 
 int major;
 
-struct device *d;
-static struct class *c;
+struct device *dev;
+static struct class *cls;
 dev_t devt;
 
+//Fonctions de callback
 static int d_open(struct inode *i, struct file *fp);
 static int d_release(struct inode *i, struct file *fp);
 static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l);
@@ -28,66 +29,61 @@ static void __exit fonctionExit(void);
 
 static int d_open(struct inode *i, struct file *fp)
 {
-    printk(KERN_INFO"Le fichier a ete ouvert");
+    printk(KERN_INFO"Le fichier a ete ouvert\n");
     return 0;
 }
 
 static int d_release(struct inode *i, struct file *fp)
 {
-    printk(KERN_INFO"Le fichier a ete ferme");
+    printk(KERN_INFO"Le fichier a ete ferme\n");
     return 0;
 }
 
 static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l)
 {
-    char *buf = kmalloc(size, GFP_KERNEL);
-	int i;
-	for (i = 0; i < size; i ++)
-		b[i] = i;
 	printk(KERN_INFO"Read!!!!\n");
-	copy_to_user(data, buf, size);
-	kfree(buf);
 	return size;
 }
 
 static ssize_t d_write(struct file *fp, const char __user *data, size_t size, loff_t *l)
 {
-    char *plop = kmalloc(size + 1, GFP_KERNEL);
-	copy_from_user(plop, buf, size);
-	plop[size] = 0;
+    char *msg = kmalloc(size + 1, GFP_KERNEL);
+	copy_from_user(msg, buf, size);
+	msg[size] = 0;
 
-	printk(KERN_INFO "J'ai reçu ça: %s\n", plop);
-	kfree(plop);
+	printk(KERN_INFO "Message recu : %s\n", msg);
+	kfree(msg);
 	return size;
 }
 
 static int __init fonctionInit(void)
 {
     int status;
-    major = register_chrdev(0,"POULET",&fops);//Fichier dans /dev/devices ?
+    //Initialisation du character device
+    major = register_chrdev(0,"charDevice",&fops);
     if(major < 0)
     {
-        printk(KERN_INFO"Erreur register_chrdev");
+        printk(KERN_INFO"Erreur register_chrdev\n");
         status = major;
         goto erreurRegister;
     }
 
-    c = class_create(THIS_MODULE, "Test module");
-    if(IS_ERR(c))
+    cls = class_create(THIS_MODULE, "Test module\n");
+    if(IS_ERR(cls))
     {
-        printk(KERN_INFO"Erreur register_chrdev");
-        status = PTR_ERR(c);
+        printk(KERN_INFO"Erreur register_chrdev\n");
+        status = PTR_ERR(cls);
         goto erreurClass;
     }
     
     devt = MKDEV(major,0);
-    d = device_create(c,NULL,devt,NULL,"testDevice");
+    dev = device_create(cls,NULL,devt,NULL,"testDevice\n");
     
-    status = IS_ERR(d) ? PTR_ERR(d) : 0;
+    status = IS_ERR(dev) ? PTR_ERR(dev) : 0;
 
     if(status != 0)
     {
-        printk(KERN_INFO"Erreur register_chrdev");
+        printk(KERN_INFO"Erreur register_chrdev\n");
 
         goto erreurDevice;
     }
@@ -95,7 +91,7 @@ static int __init fonctionInit(void)
     return 0;
 
 erreurDevice:
-    class_destroy(c);
+    class_destroy(cls);
 erreurClass:
     unregister_chrdev(major,"POULET");
 erreurRegister:
@@ -105,8 +101,8 @@ erreurRegister:
 
 static void __exit fonctionExit(void)
 {
-    device_destroy(c,devt);
-    class_destroy(c);
+    device_destroy(cls,devt);
+    class_destroy(cls);
     unregister_chrdev(major,"POULET");
 
 }
