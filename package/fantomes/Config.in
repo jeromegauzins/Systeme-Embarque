@@ -1,0 +1,4 @@
+config BR2_PACKAGE_FANTOMES
+ bool fantomes
+  help
+   driver fichiers fantomes
