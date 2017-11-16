@@ -1,4 +1,0 @@
-config BR2_PACKAGE_KHELLO
- bool khello
-  help
-   driver hello world

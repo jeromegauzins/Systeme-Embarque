@@ -147,6 +147,7 @@ void timer_callback(unsigned long data)
     state = tmpState + 1;
 
     //Puis on rajoute 500ms au timer.
+    //printk(KERN_INFO"timer, state = %d\n",state);
     mod_timer(&t, jiffies + msecs_to_jiffies(500));
 }
 
@@ -154,14 +155,14 @@ static int __init fonctionInit(void)
 {
     int tmp = 0;
     state = 0;
+    
     //Reservation et initialisation des GPIOs ici
-    
-    
-    
+
     tmp = red(4,1);
     if(tmp<0)
     {
         printk(KERN_INFO"Erreur ini red");
+
         return tmp;
     }
     
@@ -190,7 +191,6 @@ static int __init fonctionInit(void)
     }
     
     return 0;
-
   
      error_blue:
         freeGreen();
