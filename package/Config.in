@@ -1985,4 +1985,14 @@ endmenu
 menu "servo"
     source "package/servo/Config.in"
 endmenu
+
+
+menu "fan"
+    source "package/fan/Config.in"
+endmenu
+
+menu "stick"
+    source "package/stick/Config.in"
+endmenu
+
 endmenu

@@ -14,10 +14,12 @@ static int probe_spi(struct spi_device *spi);
 static int remove_spi(struct spi_device *spi);
 static int __init fonctionInit(void);
 static void __exit fonctionExit(void);
+static int readValue(void);
 
 struct gpio *servo;
 int state,major;
-int valueStick;
+
+static struct spi_device* spiDevice;
 static struct spi_driver spiDriver  = {
         .driver = {
             .name   = "stick",
@@ -41,51 +43,15 @@ struct file_operations fops = {
 };
 
 static int probe_spi(struct spi_device *arg_spiDevice){
-    char *bufferSpi = kcalloc(3,sizeof(char),GFP_KERNEL);  
-    int val = 0;
-    int i;    
-    //int erreur = 0;
     printk(KERN_INFO"probe_spi\n");
     
     arg_spiDevice->bits_per_word = 8;
     spi_setup(arg_spiDevice);
-    spi_read(arg_spiDevice,bufferSpi,3);
 
+    spiDevice = arg_spiDevice;
+
+    readValue();
     
-    for(i=0;i<3;i++){
-        printk(KERN_INFO"Buffer spi %d : %x\n",i,bufferSpi[i]);
-    }
-
-    printk("mask = %x",(bufferSpi[0] & 0x1F));
-    printk("mask decale= %x",(bufferSpi[0] &  0x1F)<<7);
-    printk("mask = %x",(bufferSpi[1] & 0xFE));
-    printk("mask decale= %x",(bufferSpi[1] & 0xFE)>>1);
-    val = ((bufferSpi[0] & 0x1F)<<7) + ((bufferSpi[1] & 0xFE)>>1);
-    printk("val: %d\n",val);
-
-    //
-    if(val> 3000){
-        printk("bas\n");
-    }
-    else if(val< 1000){
-        printk("haut\n");
-    }
-    else{
-        printk("milieu\n");
-    }
-
-    valueStick = val;
-
-    /*erreur = kstrtoint(bufferSpi,10,&res);
-    if(erreur<0){
-        kfree(bufferSpi);
-        printk(KERN_INFO"Erreur au kstrtoint %d", erreur);
-        return erreur;    
-    }
-
-    printk(KERN_INFO"coucou : %d\n",res);*/
-    kfree(bufferSpi);
-
     return 0;
 }
 static int remove_spi(struct spi_device *spi){
@@ -105,12 +71,48 @@ static int d_release(struct inode *i, struct file *fp)
     return 0;
 }
 
+static int readValue(void){
+
+    char *bufferSpi = kcalloc(3,sizeof(char),GFP_KERNEL);  
+    int val = 0,i;  
+
+    spi_read(spiDevice,bufferSpi,3);
+
+
+    //printk("mask = %x",(bufferSpi[0] & 0x1F));
+    //printk("mask decale= %x",(bufferSpi[0] &  0x1F)<<7);
+    //printk("mask = %x",(bufferSpi[1] & 0xFE));
+    //printk("mask decale= %x",(bufferSpi[1] & 0xFE)>>1);
+    
+    val = ((bufferSpi[0] & 0x1F)<<7) + ((bufferSpi[1] & 0xFE)>>1);
+   
+    //printk("val: %d\n",val);
+
+    if(val> 3000){
+        //printk("bas\n");
+    }
+    else if(val< 1000){
+        //printk("haut\n");
+    }
+    else{
+        //printk("milieu\n");
+    }
+    kfree(bufferSpi);
+
+    return val;
+
+}
+
 static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l)
 {
     char *buf = kcalloc(size,sizeof(char),GFP_KERNEL);  
-	int error;
-    printk("size = %d\n",size);
-    printk("sizeof = %d\n",sizeof(valueStick));
+	int error,valueStick;
+
+
+    valueStick = readValue();
+
+    //printk("size = %d\n",size);
+   // printk("sizeof = %d\n",sizeof(valueStick));
 
     if(size < sizeof(valueStick))
     {
