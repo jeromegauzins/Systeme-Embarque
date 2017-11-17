@@ -48,7 +48,7 @@ static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l
 static ssize_t d_write(struct file *fp, const char __user *data, size_t size, loff_t *l)
 {
     char *msg = kmalloc(size + 1, GFP_KERNEL);
-	copy_from_user(msg, buf, size);
+	copy_from_user(msg, data, size);
 	msg[size] = 0;
 
 	printk(KERN_INFO "Message recu : %s\n", msg);
@@ -77,7 +77,7 @@ static int __init fonctionInit(void)
     }
     
     devt = MKDEV(major,0);
-    dev = device_create(cls,NULL,devt,NULL,"testDevice\n");
+    dev = device_create(cls,NULL,devt,NULL,"testDevice");
     
     status = IS_ERR(dev) ? PTR_ERR(dev) : 0;
 
