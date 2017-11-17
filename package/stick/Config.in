@@ -1,0 +1,4 @@
+config BR2_PACKAGE_STICK
+ bool stick
+  help
+   driver stick
