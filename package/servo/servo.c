@@ -1,3 +1,20 @@
+/*
+*   Servo.c :
+*   Ce module sert a commander un servomoteur branché sur la pin22 de la carte 
+*   et alimenté par une pile 5V indépendante.
+*   L'angle est déterminé par la valeur contenue dans le fichier virtuel /dev/servo
+*
+*   Fonctions : 
+*       d_open : appelée lors de l'ouverture du fichier virtuel lié au module
+*   	d_release : appelée lors de la fermeture du fichier virtuel lié au module
+*   	d_read : appelée lors de la lecture du fichier virtuel lié au module
+*   	d_write : appelée lors de l'écriture dans le fichier virtuel lié au module
+*   	fonctionInit : appelée lors du chargement du module, gère les initialisations
+*   	fonctionExit : appelée lors du déchargement du module, gère les libérations de mémoire
+*       initServo : appelée pour initialiser la gpio chargée du contrôle du servomoteur
+*       freeServo : appelée pour libérer les objets liés à la gpio initialisée avec initServo
+*/
+
 #include <linux/gpio.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -6,23 +23,13 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 
-/*
-    Ce module sert a commander un servomoteur branche sur la pin22 de la carte et alimenté par une pile 5V indépendante.
-    L'angle est determine par la valeur contenue dans le fichier virtuel /dev/servo
-*/
-
-struct gpio *servo; //GPIO commandant la position du servomoteur
-static struct pwm_device *pwmDevice;
-//Valeurs initiales pour la pwm, en nanosecondes.
-int pwmPeriod = 20000000;//Periode de chaque cycle complet de pwm
-int dutyCycle = 2000000;//Durée du duty cycle
-
-int major;//numero de major du peripherique
-
-struct device *dev;
-static struct class *cls;
-dev_t devt;
-
+//Initialisation du servo et libération de la mémoire
+static int initServo(int pinNo, int value);
+void freeServo(void);
+//Chargement et déchargement du module
+static int __init fonctionInit(void);
+static void __exit fonctionExit(void);
+//Fonctions d'interaction avec le fichier virtuel
 static int d_open(struct inode *i, struct file *fp);
 static int d_release(struct inode *i, struct file *fp);
 static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l);
@@ -35,10 +42,20 @@ struct file_operations fops = {
     .release = d_release
 };
 
-static int initServo(int pinNo, int value);
-void freeServo(void);
-static int __init fonctionInit(void);
-static void __exit fonctionExit(void);
+//Structures liées à la gpio
+struct gpio *servo; //GPIO commandant la position du servomoteur
+static struct pwm_device *pwmDevice;
+
+//Valeurs initiales pour la pwm, en nanosecondes.
+int pwmPeriod = 20000000;//Periode de chaque cycle complet de pwm
+int dutyCycle = 2000000;//Durée du duty cycle par défaut
+int major;//numero de major du peripherique
+
+//Structures liées au fichier virtuel
+struct device *dev;
+static struct class *cls;
+dev_t devt;
+
 
 static int d_open(struct inode *i, struct file *fp)
 {
@@ -64,8 +81,15 @@ static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l
 	return size;
 }
 
+/*
+*   Recuperation de l'angle ecrit dans le fichier par l'utilisateur.
+*       L'angle est donné en degrés, et entre -90 et 90. 
+*       La traduction vers le dutyCycle correspondant est faite automatiquement.
+*       Si la valeur entrée est hors des bornes prévues, on envoie un message d'erreur
+*       et le dutyCycle reste inchangé. 
+*/
 static ssize_t d_write(struct file *fp, const char __user *data, size_t size, loff_t *l)
-{//Recuperation de l'angle ecrit dans le fichier par l'utilisateur
+{//
 
     int val = 0;
     int errcode;
@@ -185,7 +209,7 @@ static int __init fonctionInit(void)
         goto erreurDevice;
     }
 
-    //Initialisation de la pwm (notre branchement utilise le PWM2)
+    //Initialisation de la pwm (notre branchement utilise le canal PWM2)
     pwmDevice = pwm_request(2,"SERVO_PWM");
     pwm_config(pwmDevice,dutyCycle,pwmPeriod);
     pwm_enable(pwmDevice);
