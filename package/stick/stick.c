@@ -1,3 +1,20 @@
+/*
+*   stick.c : module de récupération de l'angle du stick analogique
+*       On y récupère la valeur passée par le CAN (via le  bus SPI),
+*       qu'on stocke dans un fichier virtuel.
+*   
+*   Fonctions : 
+*		d_open : appelée lors de l'ouverture du fichier virtuel lié au module
+*		d_release : appelée lors de la fermeture du fichier virtuel lié au module
+*		d_read : appelée lors de la lecture du fichier virtuel lié au module
+*		d_write : appelée lors de l'écriture dans le fichier virtuel lié au module
+*		fonctionInit : appelée lors du chargement du module, gère les initialisations
+*		fonctionExit : appelée lors du déchargement du module, gère les libérations de mémoire
+*       probe_spi :
+*       remove_spi :
+*       readValue :
+*/
+
 #include <linux/gpio.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
