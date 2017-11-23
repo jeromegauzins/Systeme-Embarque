@@ -1,3 +1,17 @@
+/*
+* fantomes.c : ceci est un module dont le but est de
+*	s'entrainer à utiliser les fichiers virtuels.
+*   Affiche des messages correspondant aux interactions entre l'utilisateur et le fichier virtuel.
+*
+*	Fonctions : 
+*		d_open : appelée lors de l'ouverture du fichier virtuel lié au module
+*		d_release : appelée lors de la fermeture du fichier virtuel lié au module
+*		d_read : appelée lors de la lecture du fichier virtuel lié au module
+*		d_write : appelée lors de l'écriture dans le fichier virtuel lié au module
+*		fonctionInit : appelée lors du chargement du module, gère les initialisations
+*		fonctionExit : appelée lors du déchargement du module, gère les libérations de mémoire
+*/
+
 #include <linux/gpio.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -5,27 +19,25 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 
-int major;
 
-struct device *dev;
-static struct class *cls;
-dev_t devt;
-
+static int __init fonctionInit(void);
+static void __exit fonctionExit(void);
 //Fonctions de callback
 static int d_open(struct inode *i, struct file *fp);
 static int d_release(struct inode *i, struct file *fp);
 static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l);
 static ssize_t d_write(struct file *fp, const char __user *data, size_t size, loff_t *l);
 
+int major;
+struct device *dev;
+static struct class *cls;
+dev_t devt;
 struct file_operations fops = {
     .read = d_read,
     .write = d_write,
     .open = d_open,
     .release = d_release
 };
-
-static int __init fonctionInit(void);
-static void __exit fonctionExit(void);
 
 static int d_open(struct inode *i, struct file *fp)
 {
@@ -47,7 +59,7 @@ static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l
 
 static ssize_t d_write(struct file *fp, const char __user *data, size_t size, loff_t *l)
 {
-    char *msg = kmalloc(size + 1, GFP_KERNEL);
+    	char *msg = kmalloc(size + 1, GFP_KERNEL);
 	copy_from_user(msg, data, size);
 	msg[size] = 0;
 
@@ -104,7 +116,6 @@ static void __exit fonctionExit(void)
     device_destroy(cls,devt);
     class_destroy(cls);
     unregister_chrdev(major,"POULET");
-
 }
 
 module_init(fonctionInit);
