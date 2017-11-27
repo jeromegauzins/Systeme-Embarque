@@ -56,7 +56,9 @@ struct device *dev;
 static struct class *cls;
 dev_t devt;
 
-
+/*
+* Affiche un message lors de l'ouverture du fichier virtuel associé au servomoteur
+*/
 static int d_open(struct inode *i, struct file *fp)
 {
     printk(KERN_INFO"Le fichier a ete ouvert");
