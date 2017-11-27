@@ -4,6 +4,24 @@
 #include <linux/slab.h>
 #include <linux/timer.h>
 
+/*
+* gpiooo.c : ceci est un module dont le but est de s'entrainer à utiliser les gpio et un timer.
+* 
+* Fait clignoter une diode RGB en changeant de couleur toutes les 500ms
+*
+*	Fonctions :
+*		red : initialise le gpio de la DEL rouge
+*		green : initialise le gpio de la DEL verte
+*		blue : initialise le gpio de la DEL bleue
+*		freeRed : libere le gpio de la DEL rouge et la mémoire allouée pour elle
+*		freeGreen : libere le gpio de la DEL verte et la mémoire allouée pour elle
+*		freeBlue : libere le gpio de la DEL bleue et la mémoire allouée pour elle
+*		timer_callback : gère l'alimentation des gpio, temporise les changements de couleurs de la diode
+*		fonctionInit : appelée lors du chargement du module, gère les initialisations
+*		fonctionExit : appelée lors du déchargement du module, gère les libérations de mémoire
+*/
+
+
 struct gpio *r,*g,*b; //GPIOs correspondant aux composantes rouge,bleue et verte de la DEL RGB.
 int state; 
 static struct timer_list timer;
@@ -18,14 +36,12 @@ void timer_callback(unsigned long data);
 static int __init fonctionInit(void);
 static void __exit fonctionExit(void);
 
-irqreturn_t irq_bouton (int irq, void *data)
-{
-    return IRQ_HANDLED;
-}
-
+/*
+* Initialise la DEL rouge branchee sur la pin numerotee pinNo a value
+*/
 static int red(int pinNo, int value)
 {
-    //Initialise la DEL rouge branchee sur la pin numerotee pinNo a value
+    
 
     int tmp = 0;
     r = (struct gpio*) kmalloc(sizeof(struct gpio),GFP_KERNEL);
@@ -59,10 +75,12 @@ static int red(int pinNo, int value)
     return tmp;
 }
 
-
+/*
+* Initialise la DEL verte branchee sur la pin numerotee pinNo a value
+*/
 static int green(int pinNo, int value)
 {
-  //Initialise la DEL verte branchee sur la pin numerotee pinNo a value
+  
     int tmp = 0;
     g = (struct gpio*) kmalloc(sizeof(struct gpio),GFP_KERNEL);
     if(g == NULL)
@@ -94,9 +112,11 @@ static int green(int pinNo, int value)
     return tmp;
 }
 
+/*
+* Initialise la DEL bleue branchee sur la pin numerotee pinNo a value
+*/
 static int blue(int pinNo, int value)
 {
-    //Initialise la DEL bleue branchee sur la pin numerotee pinNo a value
     int tmp = 0;
     b = (struct gpio*) kmalloc(sizeof(struct gpio),GFP_KERNEL);
     if(b == NULL)
@@ -128,9 +148,12 @@ static int blue(int pinNo, int value)
     return tmp;
 }
 
+/*
+* A chaque appel de la fonction, on passe a la combinaison de couleurs suivante
+* Les DEL sont alimentees en out ou rien, et il y a sept couleurs differentes (le huitieme etat correspond a une DEL eteinte)
+*/
 void timer_callback(unsigned long data)
-{//A chaque appel de la fonction, on passe a la combinaison de couleurs suivante
-// Les DEL sont alimentees en out ou rien, et il y a sept couleurs differentes (le huitieme etat correspond a une DEL eteinte)
+{
     int tmpState = state;
     if(state == 8)
     {
@@ -152,6 +175,11 @@ void timer_callback(unsigned long data)
     mod_timer(&timer, jiffies + msecs_to_jiffies(500));
 }
 
+/*
+* Gère les initialisations lors du chargement:
+*	- réserve et initialise des GPIOs
+*	- initialise le timer
+*/
 static int __init fonctionInit(void)
 {
     int tmp = 0;
@@ -189,6 +217,7 @@ static int __init fonctionInit(void)
     {
          printk(KERN_INFO"Erreur mod_timer");
          fonctionExit();
+	 return tmp;
     }
     
     return 0;
@@ -200,6 +229,9 @@ static int __init fonctionInit(void)
     return tmp;
 }
 
+/*
+* Libere le gpio de la DEL rouge et la mémoire
+*/
 void freeRed(void)
 {
     gpio_set_value(r->gpio,1);
@@ -207,6 +239,9 @@ void freeRed(void)
     kfree(r);
 }
 
+/*
+* Libere le gpio de la DEL vert et la mémoire
+*/
 void freeGreen(void)
 {
     gpio_set_value(g->gpio,1);
@@ -214,6 +249,9 @@ void freeGreen(void)
     kfree(g);
 }
 
+/*
+* Libere le gpio de la DEL bleue et la mémoire
+*/
 void freeBlue(void)
 {
     gpio_set_value(b->gpio,1);
@@ -221,6 +259,11 @@ void freeBlue(void)
     kfree(b);
 }
 
+/*
+* Gère les libérations de mémoire lors du déchargement:
+*	- libère le timer
+*	- libère les gpio
+*/
 static void __exit fonctionExit(void)
 {
     //Liberation du timer :
@@ -233,8 +276,12 @@ static void __exit fonctionExit(void)
     freeBlue();
 }
 
+/*
+* Permet d'utiliser "fonctionInit" et "fonctionExit" respectivement lors du chargement et du déchargemetn du module
+*/
 module_init(fonctionInit);
 module_exit(fonctionExit);
+
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Clement Dugue\nJerome Gauzins\nArthur Canal");
