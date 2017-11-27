@@ -1966,32 +1966,17 @@ menu "Text editors and viewers"
 	source "package/vim/Config.in"
 endmenu
 
-menu "HelloWorld"
-	source "package/hello/Config.in"
-endmenu
+menu "Semaine embarquee"
 
-menu "KHelloWorld"
-	source "package/khello/Config.in"
-endmenu
-
-menu "kGPIO"
+    menu "HelloWorlds"
+        	source "package/hello/Config.in"
+    		source "package/khello/Config.in"
+    endmenu
+    
 	source "package/gpiooo/Config.in"
-endmenu
-
-menu "kFantomes"
 	source "package/fantomes/Config.in"
-endmenu
-
-menu "servo"
     source "package/servo/Config.in"
-endmenu
-
-
-menu "fan"
     source "package/fan/Config.in"
-endmenu
-
-menu "stick"
     source "package/stick/Config.in"
 endmenu
 
