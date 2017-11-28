@@ -1,0 +1,4 @@
+config BR2_PACKAGE_FAN
+ bool fan
+  help
+   Controle du ventilateur
