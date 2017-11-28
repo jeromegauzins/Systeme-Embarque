@@ -26,9 +26,11 @@
 //Initialisation du servo et libération de la mémoire
 static int initServo(int pinNo, int value);
 void freeServo(void);
+
 //Chargement et déchargement du module
 static int __init fonctionInit(void);
 static void __exit fonctionExit(void);
+
 //Fonctions d'interaction avec le fichier virtuel
 static int d_open(struct inode *i, struct file *fp);
 static int d_release(struct inode *i, struct file *fp);
@@ -61,16 +63,22 @@ dev_t devt;
 */
 static int d_open(struct inode *i, struct file *fp)
 {
-    printk(KERN_INFO"Le fichier a ete ouvert");
+    printk(KERN_INFO"Le fichier servo a ete ouvert");
     return 0;
 }
 
+/*
+* Affiche un message lors de la fermeture du fichier virtuel associé au servomoteur
+*/
 static int d_release(struct inode *i, struct file *fp)
 {
-    printk(KERN_INFO"Le fichier a ete ferme");
+    printk(KERN_INFO"Le fichier servo a ete ferme");
     return 0;
 }
 
+/*
+*  Retourne le nombre d'octet lors de la lecture du fichier virtuel associé au servomoteur
+*/
 static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l)
 {
     char *buf = kmalloc(size, GFP_KERNEL);
@@ -84,21 +92,28 @@ static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l
 }
 
 /*
-*   Recuperation de l'angle ecrit dans le fichier par l'utilisateur.
+*   d_write : 
+*       Recuperation de l'angle ecrit dans le fichier par l'utilisateur.
 *       L'angle est donné en degrés, et entre -90 et 90. 
 *       La traduction vers le dutyCycle correspondant est faite automatiquement.
 *       Si la valeur entrée est hors des bornes prévues, on envoie un message d'erreur
 *       et le dutyCycle reste inchangé. 
 */
 static ssize_t d_write(struct file *fp, const char __user *data, size_t size, loff_t *l)
-{//
-
+{
     int val = 0;
     int errcode;
 
     //Reception du message
     unsigned long bytesCopied;
     char *msg = kmalloc(size + 1, GFP_KERNEL);
+    if(msg<0)
+    {
+        printk(KERN_ERR"Erreur au kmalloc de msg\n");
+        return (int)msg;
+    }
+    
+    
 	bytesCopied = copy_from_user(msg, data, size);
     if(bytesCopied < 0)
     {
@@ -112,7 +127,7 @@ static ssize_t d_write(struct file *fp, const char __user *data, size_t size, lo
     errcode = kstrtoint(msg,10,&val);    
     if(errcode<0)
     {   
-        printk(KERN_INFO"Erreur au kstrtoint");
+        printk(KERN_INFO"Erreur au kstrtoint(%s) : %d\n",msg,errcode);
         kfree(msg);
         return errcode;
     }
@@ -120,7 +135,8 @@ static ssize_t d_write(struct file *fp, const char __user *data, size_t size, lo
     val = val*1770000/180 + 1385000;//equivalence angle vers dutyCycle
 
     if(val > 2270000 || val < 500000)
-    {//dutyCycle trop court ou trop long : le servo ne peut pas depasser -90° ni 90°
+    {
+        //dutyCycle trop court ou trop long : le servo ne peut pas depasser -90° ni 90°
         printk(KERN_INFO "Valeur hors des bornes prevues, pas de changement\n");
     }
     else
@@ -134,9 +150,11 @@ static ssize_t d_write(struct file *fp, const char __user *data, size_t size, lo
 	return size;
 }
 
+/*
+* Initialise le gpio commandant le servo
+*/
 static int initServo(int pinNo, int value)
-{    
-    //Initialise le gpio commandant le servo
+{
     int tmp = 0;
     servo = (struct gpio*) kmalloc(sizeof(struct gpio),GFP_KERNEL);
     if(servo == NULL)
@@ -170,6 +188,12 @@ static int initServo(int pinNo, int value)
     return tmp;
 }
 
+/*
+* Gère les initialisations lors du chargement:
+    - réserve et initialise le GPIO du servomoteur
+    - initialise le fichier virtuel auquel on récupère les écritures
+    - initialise la PWM
+*/
 static int __init fonctionInit(void)
 {
     int tmp;
@@ -228,13 +252,21 @@ erreurRegister:
     return status;
 }
 
+/*
+* Libere le gpio du servomoteur
+*/
 void freeServo(void)
 {
     gpio_free(servo->gpio);
     kfree(servo);
 }
 
-
+/*
+* Gère les libérations de mémoire lors du déchargement:
+*    - libère le fichier virtuel
+*    - libère le GPIO du servomoteur
+*    - libère la PWM
+*/
 static void __exit fonctionExit(void)
 {
     device_destroy(cls,devt);
@@ -245,6 +277,9 @@ static void __exit fonctionExit(void)
     pwm_free(pwmDevice);
 }
 
+/*
+* Permet d'utiliser "fonctionInit" et "fonctionExit" respectivement lors du chargement et du déchargement du module
+*/
 module_init(fonctionInit);
 module_exit(fonctionExit);
 

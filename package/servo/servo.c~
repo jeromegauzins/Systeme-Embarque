@@ -1,3 +1,20 @@
+/*
+*   Servo.c :
+*   Ce module sert a commander un servomoteur branché sur la pin22 de la carte 
+*   et alimenté par une pile 5V indépendante.
+*   L'angle est déterminé par la valeur contenue dans le fichier virtuel /dev/servo
+*
+*   Fonctions : 
+*       d_open : appelée lors de l'ouverture du fichier virtuel lié au module
+*   	d_release : appelée lors de la fermeture du fichier virtuel lié au module
+*   	d_read : appelée lors de la lecture du fichier virtuel lié au module
+*   	d_write : appelée lors de l'écriture dans le fichier virtuel lié au module
+*   	fonctionInit : appelée lors du chargement du module, gère les initialisations
+*   	fonctionExit : appelée lors du déchargement du module, gère les libérations de mémoire
+*       initServo : appelée pour initialiser la gpio chargée du contrôle du servomoteur
+*       freeServo : appelée pour libérer les objets liés à la gpio initialisée avec initServo
+*/
+
 #include <linux/gpio.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -6,18 +23,15 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 
-struct gpio *servo;
-int state;
-static struct pwm_device *p;
-int pwmPeriod = 20000000;//en ns
-int dutyCycle = 2000000;
+//Initialisation du servo et libération de la mémoire
+static int initServo(int pinNo, int value);
+void freeServo(void);
 
-int major;
+//Chargement et déchargement du module
+static int __init fonctionInit(void);
+static void __exit fonctionExit(void);
 
-struct device *d;
-static struct class *c;
-dev_t devt;
-
+//Fonctions d'interaction avec le fichier virtuel
 static int d_open(struct inode *i, struct file *fp);
 static int d_release(struct inode *i, struct file *fp);
 static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l);
@@ -30,72 +44,117 @@ struct file_operations fops = {
     .release = d_release
 };
 
-static int initServo(int pinNo, int value);
-void freeServo(void);
-static int __init fonctionInit(void);
-static void __exit fonctionExit(void);
+//Structures liées à la gpio
+struct gpio *servo; //GPIO commandant la position du servomoteur
+static struct pwm_device *pwmDevice;
 
+//Valeurs initiales pour la pwm, en nanosecondes.
+int pwmPeriod = 20000000;//Periode de chaque cycle complet de pwm
+int dutyCycle = 2000000;//Durée du duty cycle par défaut
+int major;//numero de major du peripherique
+
+//Structures liées au fichier virtuel
+struct device *dev;
+static struct class *cls;
+dev_t devt;
+
+/*
+* Affiche un message lors de l'ouverture du fichier virtuel associé au servomoteur
+*/
 static int d_open(struct inode *i, struct file *fp)
 {
-    printk(KERN_INFO"Le fichier a ete ouvert");
+    printk(KERN_INFO"Le fichier servo a ete ouvert");
     return 0;
 }
 
+/*
+* Affiche un message lors de la fermeture du fichier virtuel associé au servomoteur
+*/
 static int d_release(struct inode *i, struct file *fp)
 {
-    printk(KERN_INFO"Le fichier a ete ferme");
+    printk(KERN_INFO"Le fichier servo a ete ferme");
     return 0;
 }
 
+/*
+*  Retourne le nombre d'octet lors de la lecture du fichier virtuel associé au servomoteur
+*/
 static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l)
 {
     char *buf = kmalloc(size, GFP_KERNEL);
 	int i;
 	for (i = 0; i < size; i ++)
 		buf[i] = i;
-	printk(KERN_INFO"Read!!!!\n");
-	//copy_to_user(data, buf, size);
+	printk(KERN_INFO"Fichier lu\n");
+	copy_to_user(data, buf, size);
 	kfree(buf);
 	return size;
 }
 
+/*
+*   d_write : 
+*       Recuperation de l'angle ecrit dans le fichier par l'utilisateur.
+*       L'angle est donné en degrés, et entre -90 et 90. 
+*       La traduction vers le dutyCycle correspondant est faite automatiquement.
+*       Si la valeur entrée est hors des bornes prévues, on envoie un message d'erreur
+*       et le dutyCycle reste inchangé. 
+*/
 static ssize_t d_write(struct file *fp, const char __user *data, size_t size, loff_t *l)
 {
     int val = 0;
     int errcode;
+
+    //Reception du message
     unsigned long bytesCopied;
     char *msg = kmalloc(size + 1, GFP_KERNEL);
+    if(msg<0)
+    {
+        printk(KERN_ERR"Erreur au kmalloc de msg\n");
+        return (int)msg;
+    }
+    
+    
 	bytesCopied = copy_from_user(msg, data, size);
-	msg[size] = 0;
-	printk(KERN_INFO "J'ai reçu ça: %s\n", msg);
+    if(bytesCopied < 0)
+    {
+        printk(KERN_INFO"Erreur au copy_from_user");        
+        kfree(msg);
+        return bytesCopied;
+    }	
+    msg[size] = 0;
+
+    //Passage d'un message a un angle
     errcode = kstrtoint(msg,10,&val);    
     if(errcode<0)
     {   
-        printk(KERN_INFO"Erreur au kstrtoint");
+        printk(KERN_INFO"Erreur au kstrtoint(%s) : %d\n",msg,errcode);
         kfree(msg);
         return errcode;
     }
+   
     val = val*1770000/180 + 1385000;//equivalence angle vers dutyCycle
-    printk(KERN_INFO "Apres strtol: %d\n", val);
-    if(val > 2270000 || val < 500000)//dutyCycle trop court ou trop long
+
+    if(val > 2270000 || val < 500000)
     {
-        printk(KERN_INFO "Valeur trop basse, pas de changement\n");
+        //dutyCycle trop court ou trop long : le servo ne peut pas depasser -90° ni 90°
+        printk(KERN_INFO "Valeur hors des bornes prevues, pas de changement\n");
     }
     else
     {
         dutyCycle = val;
-        pwm_disable(p);
-        pwm_config(p,dutyCycle,pwmPeriod);
-        pwm_enable(p);
+        pwm_disable(pwmDevice);
+        pwm_config(pwmDevice,dutyCycle,pwmPeriod);
+        pwm_enable(pwmDevice);
     }
     kfree(msg);
 	return size;
 }
 
+/*
+* Initialise le gpio commandant le servo
+*/
 static int initServo(int pinNo, int value)
 {
-    
-    //Initialise la DEL rouge branchee sur la pin numerotee pinNo a value
     int tmp = 0;
     servo = (struct gpio*) kmalloc(sizeof(struct gpio),GFP_KERNEL);
     if(servo == NULL)
@@ -129,11 +188,18 @@ static int initServo(int pinNo, int value)
     return tmp;
 }
 
+/*
+* Gère les initialisations lors du chargement:
+    - réserve et initialise le GPIO du servomoteur
+    - initialise le fichier virtuel auquel on récupère les écritures
+    - initialise la PWM
+*/
 static int __init fonctionInit(void)
 {
     int tmp;
     int status;
 
+    //On utilise la pin 22, qui correspond au canal PWM2
     tmp = initServo(22,1);
     if(tmp<0)
     {
@@ -141,7 +207,7 @@ static int __init fonctionInit(void)
         return tmp;
     }
 
-    major = register_chrdev(0,"SERVO",&fops);//Fichier dans /dev/devices ?
+    major = register_chrdev(0,"SERVO",&fops);
     if(major < 0)
     {
         printk(KERN_INFO"Erreur register_chrdev");
@@ -149,18 +215,18 @@ static int __init fonctionInit(void)
         goto erreurRegister;
     }
 
-    c = class_create(THIS_MODULE, "servo Module");
-    if(IS_ERR(c))
+    cls = class_create(THIS_MODULE, "servo Module");
+    if(IS_ERR(cls))
     {
         printk(KERN_INFO"Erreur register_chrdev");
-        status = PTR_ERR(c);
+        status = PTR_ERR(cls);
         goto erreurClass;
     }
     
     devt = MKDEV(major,0);
-    d = device_create(c,NULL,devt,NULL,"servo");
+    dev = device_create(cls,NULL,devt,NULL,"servo");
     
-    status = IS_ERR(d) ? PTR_ERR(d) : 0;
+    status = IS_ERR(dev) ? PTR_ERR(dev) : 0;
 
     if(status != 0)
     {
@@ -169,14 +235,15 @@ static int __init fonctionInit(void)
         goto erreurDevice;
     }
 
-    p = pwm_request(2,"SERVO_PWM");
-    pwm_config(p,dutyCycle,pwmPeriod);
-    pwm_enable(p);
+    //Initialisation de la pwm (notre branchement utilise le canal PWM2)
+    pwmDevice = pwm_request(2,"SERVO_PWM");
+    pwm_config(pwmDevice,dutyCycle,pwmPeriod);
+    pwm_enable(pwmDevice);
     
     return 0;
 
 erreurDevice:
-    class_destroy(c);
+    class_destroy(cls);
 erreurClass:
     unregister_chrdev(major,"SERVO");
 erreurRegister:
@@ -185,23 +252,34 @@ erreurRegister:
     return status;
 }
 
+/*
+* Libere le gpio du servomoteur
+*/
 void freeServo(void)
 {
     gpio_free(servo->gpio);
     kfree(servo);
 }
 
-
+/*
+* Gère les libérations de mémoire lors du déchargement:
+*    - libère le fichier virtuel
+*   - libère le GPIO du servomoteur
+*    - libère la PWM
+*/
 static void __exit fonctionExit(void)
 {
-    device_destroy(c,devt);
-    class_destroy(c);
+    device_destroy(cls,devt);
+    class_destroy(cls);
     unregister_chrdev(major,"SERVO");
     freeServo();
-    pwm_disable(p);
-    pwm_free(p);
+    pwm_disable(pwmDevice);
+    pwm_free(pwmDevice);
 }
 
+/*
+* Permet d'utiliser "fonctionInit" et "fonctionExit" respectivement lors du chargement et du déchargement du module
+*/
 module_init(fonctionInit);
 module_exit(fonctionExit);
 

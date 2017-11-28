@@ -258,9 +258,6 @@ static void __exit fonctionExit(void)
     unregister_chrdev(major,"stick");
 }
 
-/*
-* Permet d'utiliser "fonctionInit" et "fonctionExit" respectivement lors du chargement et du déchargement du module
-*/
 module_init(fonctionInit);
 module_exit(fonctionExit);
 
