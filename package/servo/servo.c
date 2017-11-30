@@ -82,11 +82,17 @@ static int d_release(struct inode *i, struct file *fp)
 static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l)
 {
     char *buf = kmalloc(size, GFP_KERNEL);
-	int i;
+	int i,status;
 	for (i = 0; i < size; i ++)
 		buf[i] = i;
 	printk(KERN_INFO"Fichier lu\n");
-	copy_to_user(data, buf, size);
+	status = copy_to_user(data, buf, size);
+	if(status < 0)
+	{
+		printk(KERN_INFO"Erreur au copy_to_user\n");        
+		kfree(buf);
+		return status;
+	}
 	kfree(buf);
 	return size;
 }
@@ -117,7 +123,7 @@ static ssize_t d_write(struct file *fp, const char __user *data, size_t size, lo
 	bytesCopied = copy_from_user(msg, data, size);
     if(bytesCopied < 0)
     {
-        printk(KERN_INFO"Erreur au copy_from_user");        
+        printk(KERN_ERR"Erreur au copy_from_user\n");        
         kfree(msg);
         return bytesCopied;
     }	
@@ -127,7 +133,7 @@ static ssize_t d_write(struct file *fp, const char __user *data, size_t size, lo
     errcode = kstrtoint(msg,10,&val);    
     if(errcode<0)
     {   
-        printk(KERN_INFO"Erreur au kstrtoint(%s) : %d\n",msg,errcode);
+        printk(KERN_ERR"Erreur au kstrtoint(%s) : %d\n",msg,errcode);
         kfree(msg);
         return errcode;
     }
