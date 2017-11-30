@@ -38,7 +38,7 @@
  - Au besoin, ajouter un mot de passe root
  - Confirmer les choix, sortir de menuconfig
  - Compiler avec `make`
- - Flasher avec `flash.sh`  **ATTENTION** : ce script flashe sur sdb sans demander de confirmation
+ - Flasher avec `flash.sh`, **ATTENTION** : ce script flashe sur sdb sans demander de confirmation
  - OU démonter le lecteur correspondant à la carte microSD (noté <SDX> par la suite) puis flasher avec `sudo dd if=output/images/sdcard.img of=/dev/<SDX> bs=50M count=1`
 
 #### utiliser les drivers :
