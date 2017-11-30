@@ -26,7 +26,7 @@
 
 #### installer les drivers et programmes :
  - se placer dans le dossier `buildroot`
- - coller les dossiers présent dans le dossier `package` du projet dans le dossier package de `buildroot`
+ - coller le contenu du dossier `package` du projet dans le dossier package de `buildroot`
  - remplacer les "config.in" de `buildroot` et de `package` par ceux du projet
  - remplacer le fichier "imx23-olinuxino.dts" dans le dossier `buildroot/output/build/linux-4.9.49/arch/arm/boot/dts`
  - faire un make menuconfig et ajouter les drivers voulus dans l'option `Target Packages/Systeme Embarque`
