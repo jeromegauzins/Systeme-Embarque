@@ -73,7 +73,7 @@ static int probe_spi(struct spi_device *arg_spiDevice)
 {
     int status = 0;
     arg_spiDevice->bits_per_word = 8;
-    spi_setup(arg_spiDevice);
+    status = spi_setup(arg_spiDevice);
     if(status < 0)
     {
         printk(KERN_ERR"Erreur spi_setup : %d\n",status);
@@ -81,10 +81,7 @@ static int probe_spi(struct spi_device *arg_spiDevice)
     }
 
     spiDevice = arg_spiDevice;
-    if(!spiDevice)
-    {
-        printk("Erreur affectation spidevice\n");
-    }
+
     return status;
 }
 
@@ -179,7 +176,6 @@ static int readValue(void){
     }
 
     val = ((bufferSpi[0] & 0x1F)<<7) + ((bufferSpi[1] & 0xFE)>>1);
-    printk(KERN_INFO"Val apres traduction : %d\n",val);
     kfree(bufferSpi);
 
     return val;
@@ -192,7 +188,6 @@ static int __init fonctionInit(void)
 {
     int status;
     // inscription dans la liste des pilotes ( /proc/devices )
-    //*  
     major = register_chrdev(0,"stick",&fops);
     if(major < 0)
     {
@@ -214,19 +209,16 @@ static int __init fonctionInit(void)
     devt = MKDEV(major,0);
 
     stickDevice = device_create(c,NULL,devt,NULL,"stick");
-    
 
     // on vérifie qu'il n'y a pas stickDevice'erreur à la création
     status = IS_ERR(stickDevice) ? PTR_ERR(stickDevice) : 0;
     if(status != 0)
     {
         printk(KERN_INFO"Erreur device_create");
-
         goto erreurDevice;
     }
 
     //Partie SPI
-
     status = spi_register_driver(&spiDriver);
     if(status <0)
     {
