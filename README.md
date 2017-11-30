@@ -7,6 +7,9 @@
  - DUGUE Clément
  - GAUZIN Jérôme
 
+### Vidéo
+ - *cf* MOV_20171117_1848424.mp4 dans dossier "doc"
+
 ### Matériel 
 *(voir documentation pour chaque matériel dans le dossier "doc")
  - Carte iMX233-OLINUXINO-MAXI
@@ -18,7 +21,7 @@
 ### Comment utiliser *Systeme-Embarque*
 
 ### Réaliser les branchements (sans oublier le port série)
- - *cf* les différents schémas fournis (branchements sur la plaquette, raccord avec la carte...)
+ - *cf* les différents schémas fournis dans dossier "doc"(branchements sur la plaquette, raccord avec la carte...)
 
 ### Se procurer buildroot et le préparer :
  - Télécharger buildroot et l'installer
