@@ -123,7 +123,7 @@ static ssize_t d_read(struct file *fp, char __user *data, size_t size, loff_t *l
     if(buf < 0)
     {
         printk(KERN_ERR"Erreur kcalloc du tampon : %d\n",(int)buf);
-        return buf;
+        return (int) buf;
     }
 
     if(size < sizeof(valueStick))
@@ -164,7 +164,7 @@ static int readValue(void){
     if(bufferSpi < 0)
     {
         printk(KERN_ERR"Erreur au kcalloc du tampon : %d\n",(int)bufferSpi);
-        return bufferSpi;
+        return (int) bufferSpi;
     }
 
     val = spi_read(spiDevice,bufferSpi,3);
