@@ -30,7 +30,7 @@
  - remplacer les "config.in" de `buildroot` et de `package` par ceux du projet
  - remplacer le fichier "imx23-olinuxino.dts" dans le dossier `buildroot/output/build/linux-4.9.49/arch/arm/boot/dts`
  - faire un make menuconfig et ajouter les drivers voulus dans l'option `Target Packages/Systeme Embarque`
- - Cocher l'option "Use a device Tree Blob" dans `Kernel` en spécifiant le bon chemin pour le fichier dts
+ - Cocher l'option "Build a device Tree Blob" dans `Kernel` en spécifiant le bon chemin pour le fichier dts
  - Cocher "spi-tools" dans `Target Packages/Hardware Handling`
  - Au besoin, ajouter un mot de passe root
  - Confirmer les choix, sortir de menuconfig
