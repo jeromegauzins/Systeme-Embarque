@@ -1,6 +1,6 @@
 # Systeme-Embarque
 
-**Systeme-Embarque - Réalisation d'un Servomoteur controllé par un Joystick**
+**Systeme-Embarque - Réalisation d'un Servomoteur contrôlé par un Joystick**
 
 ### Auteurs
  - CANAL Arthur
@@ -31,14 +31,14 @@
  - Se placer dans le dossier `buildroot`
  - Coller le contenu du dossier `package` du projet dans le dossier package de `buildroot`
  - Remplacer les "config.in" de `buildroot` et de `package` par ceux du projet
- - Remplacer le fichier "imx23-olinuxino.dts" dans le dossier `buildroot/output/build/linux-4.9.49/arch/arm/boot/dts`
+ - Remplacer le fichier "imx23-olinuxino.dts" dans le dossier `buildroot/output/build/linux-4.9.49/arch/arm/boot/dts/`
  - Faire un make menuconfig et ajouter les drivers voulus dans l'option `Target Packages/Systeme Embarque`
  - Cocher l'option "Build a device Tree Blob" dans `Kernel` en spécifiant le bon chemin pour le fichier dts
  - Cocher "spi-tools" dans `Target Packages/Hardware Handling`
  - Au besoin, ajouter un mot de passe root
  - Confirmer les choix, sortir de menuconfig
  - Compiler avec `make`
- - Flasher avec `flash.sh` (ATTENTION : ce script flashe sur sdb sans demander de confirmation)
+ - Flasher avec `flash.sh` (/!\ ATTENTION : ce script flashe sur sdb sans demander de confirmation)
  - OU démonter le lecteur correspondant à la carte microSD (noté <SDX> par la suite) puis flasher avec `sudo dd if=output/images/sdcard.img of=/dev/<SDX> bs=50M count=1`
 
 #### utiliser les drivers :
