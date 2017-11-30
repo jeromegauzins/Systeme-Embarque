@@ -20,7 +20,9 @@
 ### Réaliser les branchements (sans oublier le port série)
  - *cf* les différents schémas fournis (branchements sur la plaquette, raccord avec la carte...)
 
-### Se procurer buildroot
+### Se procurer buildroot et le préparer :
+ - Télécharger buildroot et l'installer
+ - Dans le dossier `buildroot`, lancer la commande `make olimex_imx233_olinuxino_defconfig`
 
 #### installer les drivers et programmes :
  - se placer dans le dossier `buildroot`
