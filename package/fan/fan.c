@@ -15,6 +15,7 @@ int main(void)
     int angle;
     int vitesse = 0;
     
+    //On ouvre les fichiers virtuels correspondant respectivement au servomoteur et au joystick
     fdServo = fopen("/dev/servo","w");
     fdStick = fopen("/dev/stick","r");
     
@@ -42,9 +43,7 @@ int main(void)
         if(status < 0)
         {
             printf("Erreur lecture fread\n");
-            fclose(fdServo);
-            fclose(fdStick);
-            return status;
+            goto error;
         }
         
         if(buffer[0]< 1300)
@@ -66,16 +65,19 @@ int main(void)
         printf("Buffer : |%d|\n",buffer[0]);
         printf("Vitesse : |%d|\n",vitesse);
         printf("Angle : |%d|\n",angle);
+               
         
-        //on incremente l'angle du servomoteur de vitesse
-       
-        
-        //si on excede la borne du servo moteur, on le met a la borne
+        //si on excede la borne du servo moteur, on le met a la borne la plus proche
         if(angle>90) angle = 90;
         else if(angle<-90) angle =-90;
         
-        //on ecrit l'angle dans le driver du servomoteur
-        fprintf(fdServo,"%d",angle);
+        //on transmet l'angle au driver du servomoteur
+        status = fprintf(fdServo,"%d",angle);
+        if(status < 0)
+        {
+            printf("Erreur a l'ecriture dans fdServo : %d\n",status);
+            goto error;
+        }
         fflush(fdServo);
         
         
@@ -84,5 +86,9 @@ int main(void)
         //on patiente 10 millisecondes
         usleep(10000);
     }
-    return 0;
+    status = 0;
+error:
+    fclose(fdServo);
+    fclose(fdStick);
+    return status;
 }
