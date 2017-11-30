@@ -53,5 +53,5 @@
  - CTRL + C pour arrêter
  - Rentrer `rmmod servo`
  - Rentrer `rmmod stick`
- - Rentrer `poweroff`
+ - Rentrer `poweroff`pour éteindre la carte
 
