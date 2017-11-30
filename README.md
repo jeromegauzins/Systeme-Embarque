@@ -5,7 +5,7 @@
 ### Auteurs
  - CANAL Arthur
  - DUGUE Clément
- - GAUZIN Jérome
+ - GAUZIN Jérôme
 
 ### Matériel 
 *(voir documentation pour chaque matériel dans le dossier "doc")
